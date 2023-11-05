@@ -91,6 +91,26 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/carts/:email', async (req, res) => {
+            // const cursor =await addCartCollection.find();
+            const email=req.params.email;
+            const carts=await addedItems.find({email}).toArray()
+            // const result = await cursor.toArray();
+            if(!carts){
+             return res.send([])
+            }
+            res.send(carts)
+          })
+
+
+          app.delete('/carts/:id/:email',async(req,res)=>{
+            const id=req.params.id;
+            const email=req.params.email;
+            const query={id,email}
+            const result=await addedItems.deleteOne(query)
+            res.send(result)
+          })
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
