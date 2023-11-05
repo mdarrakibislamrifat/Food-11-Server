@@ -30,15 +30,29 @@ async function run() {
     const foodItems=database.collection('foodItems');
 
     app.post('/items',async(req,res)=>{
+        
         const newFood=req.body;
+        
         const result=await foodItems.insertOne(newFood);
         res.send(result)
     })
 
+    app.get('/itemsCount',async(req,res)=>{
+
+        const count=await foodItems.estimatedDocumentCount()
+        res.send({count})
+    })
+
     app.get('/items',async(req,res)=>{
-        const cursor=foodItems.find();
-        const result=await cursor.toArray();
+        const page=parseInt(req.query.page);
+        const size=parseInt(req.query.size)
+        
+        const result= await foodItems.find()
+        .skip(page * size)
+        .limit(size)
+        .toArray()
         res.send(result)
+
     })
 
     app.get('/items/id/:id', async (req, res) => {
