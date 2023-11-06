@@ -1,16 +1,35 @@
 const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
+const jwt=require('jsonwebtoken')
 const app = express();
+require("dotenv").config();
+const cookieParser=require('cookie-parser')
 const port = process.env.PORT || 5000;
 
 app.use(express.json())
-app.use(cors())
+app.use(cookieParser())
+app.use(cors({
+    origin:['http://localhost:5173'],
+    credentials:true
+}))
 
+const logger=async(req,res,next)=>{
+    console.log('called',req.host,req.originalUrl)
+next()
+}
 
+const verifyToken=async(req,res,next)=>{
+const token=req.cookies?.token;
 
+if(!token){
+    return res.status(401).send({message:'not authorized'})
+}
+next()
+}
 
-const uri = "mongodb+srv://food:A85W7cPqaOK7rZUd@cluster0.d0x6rpk.mongodb.net/?retryWrites=true&w=majority";
+const uri =`mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d0x6rpk.mongodb.net/?retryWrites=true&w=majority`;
+
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -31,16 +50,38 @@ async function run() {
         const addedItems = database.collection('addedItems');
 
 
+        // auth related
+
+        app.post('/jwt',async(req,res)=>{
+            const user=req.body;
+            const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{
+                expiresIn:'100d'
+            })
+            res
+            .cookie('token',token,{
+                httpOnly:true,
+                secure:false,
+                
+            })
+            .send({success:true})
+        })
+
+
+
+
+
+
+
+        // services related api
 
         app.post('/items', async (req, res) => {
 
             const newFood = req.body;
-
-            const result = await foodItems.insertOne(newFood);
+            const result = await foodItems.insertOne({newFood,sold:0});
             res.send(result)
         })
 
-
+        
 
 
         app.get('/itemsCount', async (req, res) => {
@@ -64,26 +105,36 @@ async function run() {
 
         })
 
+        app.get('/items/topItems',async(req,res)=>{
+            const items=await foodItems.find().sort({sold:-1}).limit(6).toArray()
+            res.send(items)
+        })
+
 
 
         app.get('/items/id/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await foodItems.findOne(query)
-            res.send(result)
+            res.send(result);
         })
 
         // cart items
         app.post('/carts', async (req, res) => {
             const cartProduct = req.body;
+
             const productDetails = await addedItems.findOne({ id: cartProduct.id, email: cartProduct.email })
             if (productDetails) {
                 return res.send({ msg: 'Already Added' })
             }
 
+            const updateFood=await foodItems.updateOne({_id:new ObjectId(cartProduct.id)},{$inc:{sold:1,quantity:-1}})
             const result = await addedItems.insertOne(cartProduct)
+
             res.send(result)
         })
+
+        
 
         app.get('/carts',async(req,res)=>{
             const cursor=addedItems.find();
@@ -92,10 +143,10 @@ async function run() {
         })
 
         app.get('/carts/:email', async (req, res) => {
-            // const cursor =await addCartCollection.find();
+            
             const email=req.params.email;
             const carts=await addedItems.find({email}).toArray()
-            // const result = await cursor.toArray();
+            
             if(!carts){
              return res.send([])
             }
