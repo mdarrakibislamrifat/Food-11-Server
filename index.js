@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000;
 app.use(express.json())
 app.use(cookieParser())
 app.use(cors({
-    origin:['http://localhost:5173'],
+    origin:['http://localhost:5173','https://abashed-hydrant.surge.sh'],
     credentials:true
 }))
 
@@ -50,7 +50,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
         const database = client.db('foodDb');
 
         const foodItems = database.collection('foodItems');
