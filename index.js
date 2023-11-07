@@ -20,12 +20,19 @@ next()
 }
 
 const verifyToken=async(req,res,next)=>{
-const token=req.cookies?.token;
+const token=req.headers?.token;
 
 if(!token){
     return res.status(401).send({message:'not authorized'})
 }
-next()
+jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(error,decode)=>{
+    if(error){
+        return res.status(403).send({message:'forbidden access'})
+    }
+    req.decode=decode.email;
+    next()
+})
+
 }
 
 const uri =`mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d0x6rpk.mongodb.net/?retryWrites=true&w=majority`;
@@ -59,7 +66,6 @@ async function run() {
             })
             res
             .cookie('token',token,{
-                httpOnly:true,
                 secure:false,
                 
             })
@@ -137,22 +143,24 @@ async function run() {
 
         
 
-        app.get('/carts',async(req,res)=>{
-            const cursor=addedItems.find();
+        app.get('/carts',verifyToken,async(req,res)=>{
+            const email=req.decode;
+            const cursor=addedItems.find({email});
+            
             const result=await cursor.toArray();
             res.send(result)
         })
 
-        app.get('/carts/:email', async (req, res) => {
+        // app.get('/carts/:email',verifyToken, async (req, res) => {
             
-            const email=req.params.email;
-            const carts=await addedItems.find({email}).toArray()
-            
-            if(!carts){
-             return res.send([])
-            }
-            res.send(carts)
-          })
+        //     const email=req.params.email;
+        //     const carts=await addedItems.find({email}).toArray()
+        //     console.log(req.decode)
+        //     if(!carts){
+        //      return res.send([])
+        //     }
+        //     res.send(carts)
+        //   })
 
 
           app.delete('/carts/:id/:email',async(req,res)=>{
