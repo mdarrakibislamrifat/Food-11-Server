@@ -77,7 +77,8 @@ async function run() {
         app.post('/items', async (req, res) => {
 
             const newFood = req.body;
-            const result = await foodItems.insertOne({newFood,sold:0});
+            newFood.sold=0;
+            const result = await foodItems.insertOne(newFood);
             res.send(result)
         })
 
