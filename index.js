@@ -22,6 +22,8 @@ next()
 const verifyToken=async(req,res,next)=>{
 const token=req.headers?.token;
 
+
+
 if(!token){
     return res.status(401).send({message:'not authorized'})
 }
@@ -29,7 +31,8 @@ jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(error,decode)=>{
     if(error){
         return res.status(403).send({message:'forbidden access'})
     }
-    req.decode=decode.email;
+    req.decode=decode;
+
     next()
 })
 
@@ -64,12 +67,7 @@ async function run() {
             const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{
                 expiresIn:'100d'
             })
-            res
-            .cookie('token',token,{
-                secure:false,
-                
-            })
-            .send({success:true})
+            res.send({success:true,token})
         })
 
 
@@ -144,7 +142,7 @@ async function run() {
         
 
         app.get('/carts',verifyToken,async(req,res)=>{
-            const email=req.decode;
+            const email=req.decode.email;
             const cursor=addedItems.find({email});
             
             const result=await cursor.toArray();
